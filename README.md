@@ -28,22 +28,41 @@ DeepSeek Harness Web 的 DeepSeek API 余额插件。在侧边栏底部“设置
 
 ## 安装
 
-克隆仓库并进入项目目录：
+支持两种安装方式，任选其一。
+
+### 方式一：在线安装（推荐）
+
+直接以 GitHub 为源安装，包会以实体副本形式进入 profile，与本地目录无关：
+
+```powershell
+dsh plugin --profile web add github:95384/DSH-ds-balance
+```
+
+更新到最新版本：
+
+```powershell
+dsh plugin --profile web update ds-balance
+```
+
+### 方式二：本地安装（源码开发/调试）
+
+克隆仓库并以本地目录安装：
 
 ```powershell
 git clone https://github.com/95384/DSH-ds-balance.git
 cd DSH-ds-balance
-```
-
-把项目安装为 `web` profile 的本地依赖：
-
-```powershell
 dsh plugin --profile web add .
 ```
 
+本地安装以链接方式指向源码目录，修改源码后重启 `dsh web` 即可生效；**本地目录需保留**，删除后请改用在线安装。
+
+### 通用说明
+
 本包声明了 `dsh.bundle`，安装成功后会自动加入 profile 的 bundle 层并写入 Loader 条目，无需手动编辑 `cordis.patch.yml`。重启 `dsh web` 并刷新浏览器后生效。
 
-配置 API Key。可以使用 Harness 已有的 credentials 设置；直接使用文件时，在 `~/.dsh/.credentials.yaml` 中设置：
+### 配置 API Key
+
+可以使用 Harness 已有的 credentials 设置；直接使用文件时，在 `~/.dsh/.credentials.yaml` 中设置：
 
 ```yaml
 DEEPSEEK_API_KEY: sk-your-key
