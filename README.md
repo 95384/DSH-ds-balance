@@ -1,6 +1,8 @@
 # ds-balance
 
-DeepSeek Harness Web 的 DeepSeek API 余额插件。在侧边栏“新会话”按钮之后显示当前账户余额；侧边栏收起时显示紧凑的 `¥` 徽标和悬停提示。
+当前版本：V0.9.0
+
+DeepSeek Harness Web 的 DeepSeek API 余额插件。在侧边栏底部“设置”旁（`sidebar.footer.action` 稳定 Slot）显示当前账户余额；侧边栏收起时显示紧凑的 `¥` 徽标和悬停提示。
 
 ## 功能
 
@@ -8,14 +10,14 @@ DeepSeek Harness Web 的 DeepSeek API 余额插件。在侧边栏“新会话”
 - API Key 由 Harness credentials 服务在 Host 进程中解析，不发送到浏览器。
 - 成功响应缓存 60 秒，请求超时为 10 秒。
 - 浏览器每 60 秒轮询；失败时每 2 秒重试，最多 10 次。
-- 使用 React portal 进入侧边栏现有 flex 布局，跟随展开、收起和宽度变化。
+- 组件注册到官方 `sidebar.footer.action` Slot，通过 Slot owner props 的 `wide` 区分展开/收起，不使用 portal、哈希类名或内部 DOM 插入。
 
 ## 工作原理
 
-- `lib/index.js` 注入 WebServer 和 credentials，提供同源接口 `GET /ds-balance`。
+- `lib/index.js` 注入 WebServer 和 credentials，提供同源接口 `GET /ds-balance`（仅允许 GET，其余返回 405）。
 - Host 使用 `DEEPSEEK_API_KEY` 请求 DeepSeek API，只把余额结果或错误码返回浏览器。
-- `lib/client.js` 向 `shell.overlay` 注册组件，在侧边栏流式布局中创建挂载点并渲染余额。
-- 展开状态显示完整余额，收起状态显示 `¥` 徽标。
+- `lib/client.js` 向 `sidebar.footer.action` 注册组件；展开状态显示完整余额，收起状态显示 `¥` 徽标。
+- 样式由插件 Fiber 管理，卸载时自动移除。
 
 ## 环境要求
 
@@ -39,15 +41,7 @@ cd DSH-ds-balance
 dsh plugin --profile web add .
 ```
 
-本包不是 bundle；命令提示“installed as a plain dependency”属于预期行为。随后编辑 `~/.dsh/profiles/web/cordis.patch.yml`，在顶层 patch 列表中加入 Loader 条目：
-
-```yaml
-- insert:
-    - id: ds-balance
-      name: ds-balance
-```
-
-如果文件中已有其他 `insert`，把 `ds-balance` 合并到现有 `insert` 数组，不要创建第二个 YAML 文档。没有其他 patch 时，文件必须是上述数组或 `[]`，不能留空。
+本包声明了 `dsh.bundle`，安装成功后会自动加入 profile 的 bundle 层并写入 Loader 条目，无需手动编辑 `cordis.patch.yml`。重启 `dsh web` 并刷新浏览器后生效。
 
 配置 API Key。可以使用 Harness 已有的 credentials 设置；直接使用文件时，在 `~/.dsh/.credentials.yaml` 中设置：
 
@@ -59,36 +53,39 @@ DEEPSEEK_API_KEY: sk-your-key
 
 ## 验证
 
-- 侧边栏展开时显示“余额”和金额，收起时显示 `¥` 徽标。
-- 访问 `http://127.0.0.1:3080/ds-balance`，成功时返回 `{"ok":true,"balance":...}`。
+- 侧边栏底部“设置”旁显示“余额”和金额，收起时显示 `¥` 徽标。
+- 访问 `http://127.0.0.1:3080/ds-balance`，成功时返回 `{"ok":true,"balance":...}`；非 GET 请求返回 405。
 - 在浏览器 Network 面板检查 `/ds-balance` 请求，确认请求中没有 API Key。
 
 ## 卸载
 
-先从 `~/.dsh/profiles/web/cordis.patch.yml` 删除 `ds-balance` Loader 条目，再执行：
+执行：
 
 ```powershell
 dsh plugin --profile web remove ds-balance
 ```
 
-如果删除后没有其他 patch，保留合法的顶层空数组 `[]`。最后重启 `dsh web` 并刷新浏览器。credentials 属于 Harness 用户配置，除非确定不再使用，否则不需要删除。
+bundle 层会随依赖移除自动清理，无需手动编辑 `cordis.patch.yml`。最后重启 `dsh web` 并刷新浏览器。credentials 属于 Harness 用户配置，除非确定不再使用，否则不需要删除。
 
 ## 开发与验证
 
-本项目没有构建步骤，生产入口直接位于 `lib/`。修改后可执行语法检查：
+本项目没有构建步骤，生产入口直接位于 `lib/`。修改后可执行测试与语法检查：
 
 ```powershell
+npm test
 node --check lib/index.js
 node --check lib/client.js
 npm pack --dry-run
 ```
+
+测试覆盖浏览器 bundle 的 `sidebar.footer.action` 注册契约（id、order、inject）。
 
 Host 或 Loader 条目变化需要重启 `dsh web`。浏览器 bundle 更新后建议硬刷新，确保旧脚本缓存被替换。
 
 ## 兼容性与限制
 
 - 余额来自 API 计费账户，并取 `balance_infos` 第一条记录。
-- 余额组件依赖当前 Harness 侧边栏 DOM 和样式类，例如 `.hHd-Xa_root` 与 `.hHd-Xa_collapsed`；前端结构升级后可能需要适配。
+- 余额组件挂载在官方 `sidebar.footer.action` Slot（list 型，additive），不依赖内部 DOM 或哈希类名；前端结构升级后仍应重新验证 Slot 名称与 owner props。
 - 插件只支持 Web surface，不适用于 headless 或 TUI profile。
 - Host/Client 插件接口与 Harness `0.1.0-rc.6` 对齐，升级 Harness 后应重新验证路由和侧边栏布局。
 
@@ -98,9 +95,12 @@ Host 或 Loader 条目变化需要重启 `dsh web`。浏览器 bundle 更新后�
 .
 |-- README.md
 |-- package.json
-\-- lib/
-    |-- index.js
-    \-- client.js
+|-- cordis.patch.yml
+|-- lib/
+|   |-- index.js
+|   \-- client.js
+\-- test/
+    \-- client.test.js
 ```
 
 ## 许可证
