@@ -1,10 +1,10 @@
 ﻿<#
 .SYNOPSIS
-  ds-usage 一键安装脚本(幂等,可反复运行)
+  ds-balance 一键安装脚本(幂等,可反复运行)
 
 .DESCRIPTION
   1. 复制插件文件(lib + package.json)到 dsh web profile 的 node_modules
-  2. 把 ds-usage 条目写入 cordis.patch.yml(自动备份为 .bak)
+  2. 把 ds-balance 条目写入 cordis.patch.yml(自动备份为 .bak)
   不会修改 .credentials.yaml(API Key 需手动配置),不会重启 dsh web。
 
 .PARAMETER ProfileDir
@@ -19,7 +19,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $src = $PSScriptRoot
-$pkgDir = Join-Path $ProfileDir 'node_modules\ds-usage'
+$pkgDir = Join-Path $ProfileDir 'node_modules\ds-balance'
 $patchPath = Join-Path $ProfileDir 'cordis.patch.yml'
 
 Write-Host '[1/3] 复制插件文件 -> ' $pkgDir
@@ -35,24 +35,24 @@ if (-not (Test-Path $patchPath)) {
 Write-Host '[2/3] 检查 cordis.patch.yml'
 $content = Get-Content $patchPath -Raw -Encoding UTF8
 $CRLF = [Environment]::NewLine
-if ($content -match 'id:\s*ds-usage') {
-  Write-Host '      已包含 ds-usage 条目,跳过(幂等)'
+if ($content -match 'id:\s*ds-balance') {
+  Write-Host '      已包含 ds-balance 条目,跳过(幂等)'
 } else {
   Copy-Item $patchPath "${patchPath}.bak" -Force
   Write-Host "      已备份 -> ${patchPath}.bak"
   if ($content -match '(?m)^\s*\[\]\s*$') {
     # 模板:顶层空数组,整体替换为 insert 条目(保持单个 YAML 文档)
-    $new = $content -replace '(?m)^\s*\[\]\s*$', ("- insert:" + $CRLF + "    - id: ds-usage" + $CRLF + "      name: ds-usage")
+    $new = $content -replace '(?m)^\s*\[\]\s*$', ("- insert:" + $CRLF + "    - id: ds-balance" + $CRLF + "      name: ds-balance")
   } elseif ($content -match '(?m)^\s*- insert:') {
     # 已有 insert 块:在其后补入条目(缩进 4 空格,与 dsh 模板一致)
-    $new = $content -replace '(?m)^(\s*- insert:)[^\S\n]*$', ("`$1" + $CRLF + "    - id: ds-usage" + $CRLF + "      name: ds-usage")
+    $new = $content -replace '(?m)^(\s*- insert:)[^\S\n]*$', ("`$1" + $CRLF + "    - id: ds-balance" + $CRLF + "      name: ds-balance")
   } else {
     # 无 insert 块(非标准文件):末尾追加
-    $new = $content.TrimEnd() + $CRLF + $CRLF + "- insert:" + $CRLF + "    - id: ds-usage" + $CRLF + "      name: ds-usage" + $CRLF
+    $new = $content.TrimEnd() + $CRLF + $CRLF + "- insert:" + $CRLF + "    - id: ds-balance" + $CRLF + "      name: ds-balance" + $CRLF
   }
   # 无 BOM 的 UTF-8 写入,避免编码问题
   [System.IO.File]::WriteAllText($patchPath, $new, (New-Object System.Text.UTF8Encoding($false)))
-  Write-Host '      已写入 ds-usage 条目'
+  Write-Host '      已写入 ds-balance 条目'
 }
 
 Write-Host '[3/3] 完成。接下来:'
