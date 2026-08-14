@@ -1,9 +1,6 @@
 # Node
 node_modules/
 
-# Installer backups
-*.bak
-
 # Logs & OS
 *.log
 .DS_Store
